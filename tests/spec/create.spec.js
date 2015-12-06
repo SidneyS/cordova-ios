@@ -21,17 +21,14 @@ var shell = require('shelljs'),
     spec = __dirname,
     path = require('path'),
     util = require('util');
-    
+
     var cordova_bin = path.join(spec, '../..', 'bin');
-    var tmp = path.join(spec, '..', 'tmp');
-    
+    var tmp = require('tmp').dirSync().name;
+
 function createAndBuild(projectname, projectid) {
     var return_code = 0;
     var command;
-    
-    // create tmp folder if necessary
-    shell.mkdir('-p', tmp);
-    
+
     // remove existing folder
     command =  path.join(tmp, projectname);
     shell.rm('-rf', command);
@@ -41,19 +38,19 @@ function createAndBuild(projectname, projectid) {
     shell.echo(command);
     return_code = shell.exec(command).code;
     expect(return_code).toBe(0);
-    
+
     // build the project
     command = util.format('"%s/cordova/build"', path.join(tmp, projectname));
     shell.echo(command);
-    return_code = shell.exec(command).code;
+    return_code = shell.exec(command, { silent: true }).code;
     expect(return_code).toBe(0);
 
     // clean-up
     command =  path.join(tmp, projectname);
     shell.rm('-rf', command);
-}    
+}
 
-    
+
 describe('create', function() {
 
     it('create project with ascii name, no spaces', function() {
@@ -62,7 +59,7 @@ describe('create', function() {
 
         createAndBuild(projectname, projectid);
     });
-    
+
     it('create project with ascii name, and spaces', function() {
         var projectname = 'test create';
         var projectid = 'com.test.app2';
@@ -83,7 +80,7 @@ describe('create', function() {
 
         createAndBuild(projectname, projectid);
     });
-    
+
     it('create project with ascii+unicode name, no spaces', function() {
         var projectname = '応応応応hello用用用用';
         var projectid = 'com.test.app5';
@@ -97,10 +94,23 @@ describe('create', function() {
 
         createAndBuild(projectname, projectid);
     });
-    
-    // clean-up last
-    it('cleanup tmp folder', function() {
-        shell.rm('-rf', tmp);
-    });
 
+});
+
+describe('end-to-end list validation', function(){
+    it('handles list parameter', function() {
+        shell.cp('-f', path.join(cordova_bin, 'check_reqs'), path.join(cordova_bin, 'templates', 'scripts', 'cordova', 'check_reqs'));
+        shell.cp('-f', path.join(cordova_bin, 'lib', 'check_reqs.js'), path.join(cordova_bin, 'templates', 'scripts', 'cordova', 'lib', 'check_reqs.js'));
+        shell.cp('-f', path.join(cordova_bin, 'lib', 'versions.js'), path.join(cordova_bin, 'templates', 'scripts', 'cordova', 'lib', 'versions.js'));
+        // create empty .xcodeproj folder to mimic Cordova app structure, otherwise scripts will fail
+        shell.mkdir('-p', path.join(cordova_bin, 'templates', 'scripts', 'HelloCordova.xcodeproj'));
+        var command = '"' + path.join(cordova_bin, 'templates', 'scripts', 'cordova', 'run') + '" --list';
+        var output = shell.exec(command, {silent: true}).output;
+        expect(output).toMatch(/Available iOS Virtual Devices/);
+        expect(output).toMatch(/Available iOS Devices/);
+        shell.rm('-f', path.join(cordova_bin, 'templates', 'scripts', 'cordova', 'check_reqs'));
+        shell.rm('-f', path.join(cordova_bin, 'templates', 'scripts', 'cordova', 'lib', 'check_reqs.js'));
+        shell.rm('-f', path.join(cordova_bin, 'templates', 'scripts', 'cordova', 'lib', 'versions.js'));
+        shell.rm('-rf', path.join(cordova_bin, 'templates', 'scripts', 'HelloCordova.xcodeproj'));
+    });
 });

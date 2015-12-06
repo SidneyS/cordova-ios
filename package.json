@@ -1,8 +1,8 @@
 {
     "name": "cordova-ios",
-    "version": "3.7.0-dev",
+    "version": "4.1.0-dev",
     "description": "cordova-ios release",
-    "main": "bin/create",
+    "main": "bin/templates/scripts/cordova/Api.js",
     "repository": {
         "type": "git",
         "url": "https://git-wip-us.apache.org/repos/asf/cordova-ios.git"
@@ -12,14 +12,19 @@
         "cordova",
         "apache"
     ],
-    "scripts" : {
-        "test" : "npm run jasmine",
-        "jasmine" : "jasmine-node --captureExceptions --color tests/spec"
-        
+    "scripts": {
+        "test": "npm run jshint && npm run jasmine",
+        "jasmine": "npm run objc-tests && npm run jasmine-tests",
+        "objc-tests": "jasmine-node --captureExceptions --color tests/spec/cordovalib.spec.js",
+        "jasmine-tests": "jasmine-node --captureExceptions --color tests/spec/create.spec.js",
+        "jshint": "node node_modules/jshint/bin/jshint bin && node node_modules/jshint/bin/jshint tests"
     },
     "author": "Apache Software Foundation",
     "license": "Apache Version 2.0",
-    "dependencies": {
+    "devDependencies": {
+        "jshint": "^2.6.0",
+        "uncrustify": "^0.6.1",
+        "tmp": "^0.0.26",
         "jasmine-node": "~1",
         "shelljs": "^0.2.6",
         "coffee-script": "^1.7.1",
