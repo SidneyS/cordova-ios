@@ -20,6 +20,7 @@
 #import <XCTest/XCTest.h>
 
 #import <Cordova/CDVWhitelist.h>
+#import "CDVIntentAndNavigationFilter.h"
 
 @interface CDVWhitelistTests : XCTestCase
 @end
@@ -241,19 +242,30 @@
     XCTAssertTrue([whitelist URLIsAllowed:[NSURL URLWithString:@"https://cordova.apache.org"]]);
 }
 
-- (void)testWildcardPlusScheme
+- (void)testWildcardScheme
 {
     NSArray* allowedHosts = [NSArray arrayWithObjects:
-        @"http://*.apache.org",
+        @"*://*.test.com",
         nil];
 
     CDVWhitelist* whitelist = [[CDVWhitelist alloc] initWithArray:allowedHosts];
 
-    XCTAssertTrue([whitelist URLIsAllowed:[NSURL URLWithString:@"http://www.apache.org"]]);
-    XCTAssertFalse([whitelist URLIsAllowed:[NSURL URLWithString:@"https://www.google.com"]]);
-    XCTAssertFalse([whitelist URLIsAllowed:[NSURL URLWithString:@"ftp://cordova.apache.org"]]);
-    XCTAssertTrue([whitelist URLIsAllowed:[NSURL URLWithString:@"http://cordova.apache.org"]]);
-    XCTAssertFalse([whitelist URLIsAllowed:[NSURL URLWithString:@"https://cordova.apache.org"]]);
+    XCTAssertFalse([whitelist URLIsAllowed:[NSURL URLWithString:@"http://apache.org"]]);
+    XCTAssertFalse([whitelist URLIsAllowed:[NSURL URLWithString:@"gopher://testtt.com"]]);
+    
+    XCTAssertTrue([whitelist URLIsAllowed:[NSURL URLWithString:@"gopher://test.com"]]);
+    XCTAssertTrue([whitelist URLIsAllowed:[NSURL URLWithString:@"http://test.com"]]);
+    XCTAssertTrue([whitelist URLIsAllowed:[NSURL URLWithString:@"http://my.test.com"]]);
+    XCTAssertTrue([whitelist URLIsAllowed:[NSURL URLWithString:@"https://test.com"]]);
+    XCTAssertTrue([whitelist URLIsAllowed:[NSURL URLWithString:@"https://my.test.com"]]);
+
+    XCTAssertTrue([whitelist URLIsAllowed:[NSURL URLWithString:@"http://test.com/my/path"]]);
+    XCTAssertTrue([whitelist URLIsAllowed:[NSURL URLWithString:@"http://my.test.com/my/path"]]);
+    XCTAssertTrue([whitelist URLIsAllowed:[NSURL URLWithString:@"https://test.com/my/path"]]);
+    XCTAssertTrue([whitelist URLIsAllowed:[NSURL URLWithString:@"https://my.test.com/my/path"]]);
+
+    XCTAssertTrue([whitelist URLIsAllowed:[NSURL URLWithString:@"gopher://test.com#foo"]]);
+    XCTAssertFalse([whitelist URLIsAllowed:[NSURL URLWithString:@"#foo"]]);
 }
 
 - (void)testCredentials
@@ -268,5 +280,22 @@
     XCTAssertTrue([whitelist URLIsAllowed:[NSURL URLWithString:@"http://user:pass@www.apache.org"]]);
     XCTAssertTrue([whitelist URLIsAllowed:[NSURL URLWithString:@"http://user:pass@www.google.com"]]);
 }
+
+- (void)testAllowIntentsAndNavigations
+{
+    NSArray* allowIntents = @[ @"https://*" ];
+    NSArray* allowNavigations = @[ @"https://*.apache.org" ];
+    
+    CDVWhitelist* intentsWhitelist = [[CDVWhitelist alloc] initWithArray:allowIntents];
+    CDVWhitelist* navigationsWhitelist = [[CDVWhitelist alloc] initWithArray:allowNavigations];
+    
+    // Test allow-navigation superceding allow-intent
+    XCTAssertEqual([CDVIntentAndNavigationFilter filterUrl:[NSURL URLWithString:@"https://apache.org/foo.html"] intentsWhitelist:intentsWhitelist navigationsWhitelist:navigationsWhitelist], CDVIntentAndNavigationFilterValueNavigationAllowed);
+    // Test wildcard https as allow-intent
+    XCTAssertEqual([CDVIntentAndNavigationFilter filterUrl:[NSURL URLWithString:@"https://google.com"] intentsWhitelist:intentsWhitelist navigationsWhitelist:navigationsWhitelist], CDVIntentAndNavigationFilterValueIntentAllowed);
+    // Test http (not allowed in either)
+    XCTAssertEqual([CDVIntentAndNavigationFilter filterUrl:[NSURL URLWithString:@"http://google.com"] intentsWhitelist:intentsWhitelist navigationsWhitelist:navigationsWhitelist], CDVIntentAndNavigationFilterValueNoneAllowed);
+}
+
 
 @end
